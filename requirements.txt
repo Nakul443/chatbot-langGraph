@@ -1,0 +1,20 @@
+# Web Framework
+fastapi
+uvicorn[standard]
+
+# Core Orchestration
+langchain
+langgraph
+langchain-openai
+langchain-core
+
+# State Persistence (Postgres)
+langgraph-checkpoint-postgres
+psycopg[binary]  # Required by the PostgresSaver
+
+# Environment & Utilities
+python-dotenv
+pydantic-settings
+
+# Observability
+langsmith
