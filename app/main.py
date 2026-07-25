@@ -66,7 +66,7 @@ async def chat_stream(request: ChatRequest):
                 
                 # 2. Configure thread isolation
                 config = {"configurable": {"thread_id": request.thread_id}}
-                
+
                 # 3. Format input payload for the graph state
                 input_data = {"messages": [("user", request.message)]}
                 
