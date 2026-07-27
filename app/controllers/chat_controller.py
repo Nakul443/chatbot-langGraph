@@ -15,24 +15,26 @@ async def handle_chat_stream(message: str, thread_id: str) -> StreamingResponse:
 
     async def event_generator():
         try:
-            # 1. Instantiate the checkpointer and compile the graph for this request
-            async with await get_checkpointer() as checkpointer:
-                graph = await build_graph_with_checkpointer(checkpointer)
+            # instantiating the checkpointer (shares the app-wide connection pool)
+            # and compile the graph for this request
+            checkpointer = await get_checkpointer()
+            graph = await build_graph_with_checkpointer(checkpointer)
 
-                # 2. Configure thread isolation
-                config = {"configurable": {"thread_id": thread_id}}
+            # 2. Configure thread isolation
+            config = {"configurable": {"thread_id": thread_id}}
 
-                # 3. Format input payload for the graph state
-                input_data = {"messages": [("user", message)]}
+            # 3. Format input payload for the graph state
+            input_data = {"messages": [("user", message)]}
 
-                # 4. Stream graph node outputs asynchronously
-                async for event in graph.astream(input_data, config=config, stream_mode="updates"):
-                    if "chatbot" in event:
-                        ai_message = event["chatbot"]["messages"][-1]
-                        content = ai_message.content
-                        if content:
-                            # Yield chunk formatted for Server-Sent Events
-                            yield f"data: {content}\n\n"
+            # 4. Stream individual LLM tokens as they're generated (true
+            #    token-by-token streaming).
+            #    "messages" mode yields (message_chunk, metadata) tuples.
+            async for msg_chunk, metadata in graph.astream(
+                input_data, config=config, stream_mode="messages"
+            ):
+                # Only stream tokens coming from the chatbot node, not tool nodes
+                if metadata.get("langgraph_node") == "chatbot" and msg_chunk.content:
+                    yield f"data: {msg_chunk.content}\n\n"
 
             yield "data: [DONE]\n\n"
             

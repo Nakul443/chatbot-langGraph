@@ -17,10 +17,11 @@ async def lifespan(app: FastAPI):
     then safely closes the pool on shutdown.
     """
     await connection_pool.open()
-    
-    async with await get_checkpointer() as checkpointer:
-        await checkpointer.setup()
-        
+
+    # AsyncPostgresSaver is a plain object, not an async context manager
+    checkpointer = await get_checkpointer()
+    await checkpointer.setup()
+
     yield
     
     await connection_pool.close()
