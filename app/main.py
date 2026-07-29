@@ -34,7 +34,7 @@ app = FastAPI(title="LangGraph MCP Chatbot API", lifespan=lifespan)
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(AuthMiddleware)
 
-# Include routers
+# include routers
 app.include_router(chat_router)
 
 @app.get("/health")

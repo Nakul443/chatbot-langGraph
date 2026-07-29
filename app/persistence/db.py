@@ -11,10 +11,13 @@ load_dotenv()
 DB_URI = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/postgres")
 
 # asynchronous connection pool for PostgreSQL
+# autocommit=True is required: LangGraph's checkpointer.setup() runs
+# `CREATE INDEX CONCURRENTLY`, which Postgres refuses to run inside a transaction.
 connection_pool = AsyncConnectionPool(
     conninfo=DB_URI,
     max_size=20,
     open=False,
+    kwargs={"autocommit": True},
 )
 
 async def get_checkpointer() -> AsyncPostgresSaver:

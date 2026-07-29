@@ -13,7 +13,7 @@ class ChatRequest(BaseModel):
 
 # POST: /chat/stream
 @router.post("/stream")
-async def chat_stream(request: ChatRequest, http_request: Request):
+async def chat_stream(request: ChatRequest, http_request: Request) -> StreamingResponse:
     """
     HTTP route endpoint for streaming chat responses.
     business logic and graph execution sent to the chat controller
