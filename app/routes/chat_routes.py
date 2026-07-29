@@ -1,4 +1,6 @@
-from fastapi import APIRouter
+# file to define the chat routes for the FastAPI application
+
+from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from app.controllers.chat_controller import handle_chat_stream
@@ -11,9 +13,11 @@ class ChatRequest(BaseModel):
 
 # POST: /chat/stream
 @router.post("/stream")
-async def chat_stream(request: ChatRequest):
+async def chat_stream(request: ChatRequest, http_request: Request):
     """
     HTTP route endpoint for streaming chat responses.
-    Delegates business logic and graph execution to the chat controller.
+    business logic and graph execution sent to the chat controller
+    `user_id` is set by AuthMiddleware after verifying the JWT
     """
-    return await handle_chat_stream(request.message, request.thread_id)
+    user_id = http_request.state.user_id
+    return await handle_chat_stream(request.message, request.thread_id, user_id)

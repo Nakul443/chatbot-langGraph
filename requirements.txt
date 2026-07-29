@@ -12,6 +12,9 @@ langchain-core
 langgraph-checkpoint-postgres
 psycopg[binary]  # Required by the PostgresSaver
 
+# Auth
+pyjwt
+
 # Environment & Utilities
 python-dotenv
 pydantic-settings

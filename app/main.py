@@ -8,7 +8,9 @@ from fastapi import FastAPI
 from app.persistence.db import connection_pool, get_checkpointer
 from app.routes.chat_routes import router as chat_router
 from app.middleware.logging_middleware import RequestLoggingMiddleware
+from app.middleware.auth_middleware import AuthMiddleware
 
+# this is the main entrypoint for the FastAPI application, which is run by uvicorn in production
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -18,7 +20,6 @@ async def lifespan(app: FastAPI):
     """
     await connection_pool.open()
 
-    # AsyncPostgresSaver is a plain object, not an async context manager
     checkpointer = await get_checkpointer()
     await checkpointer.setup()
 
@@ -26,11 +27,12 @@ async def lifespan(app: FastAPI):
     
     await connection_pool.close()
 
-# Initialize FastAPI application with lifespan
+# initialising fastAPI application with title and lifespan context manager
 app = FastAPI(title="LangGraph MCP Chatbot API", lifespan=lifespan)
 
-# Register custom middleware
+# middleware for logging requests and handling authentication
 app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(AuthMiddleware)
 
 # Include routers
 app.include_router(chat_router)

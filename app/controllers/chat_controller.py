@@ -1,9 +1,11 @@
+# file to handle the core business logic for streaming chat responses using LangGraph and PostgreSQL
+
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 from app.persistence.db import get_checkpointer
 from app.graph.builder import build_graph_with_checkpointer
 
-async def handle_chat_stream(message: str, thread_id: str) -> StreamingResponse:
+async def handle_chat_stream(message: str, thread_id: str, user_id: str) -> StreamingResponse:
     """
     Handles the core business logic for streaming chat responses using LangGraph and PostgreSQL.
     """
@@ -13,21 +15,25 @@ async def handle_chat_stream(message: str, thread_id: str) -> StreamingResponse:
     if not thread_id:
         raise HTTPException(status_code=400, detail="thread_id is required for state management.")
 
+    # Scope the thread to the authenticated user so one user can never read/write
+    # another user's conversation just by guessing/reusing a thread_id.
+    scoped_thread_id = f"{user_id}:{thread_id}"
+
     async def event_generator():
         try:
-            # instantiating the checkpointer (shares the app-wide connection pool)
-            # and compile the graph for this request
+            # 1. Instantiate the checkpointer (shares the app-wide connection pool)
+            #    and compile the graph for this request.
             checkpointer = await get_checkpointer()
             graph = await build_graph_with_checkpointer(checkpointer)
 
-            # 2. Configure thread isolation
-            config = {"configurable": {"thread_id": thread_id}}
+            # 2. Configure thread isolation (scoped to the authenticated user)
+            config = {"configurable": {"thread_id": scoped_thread_id}}
 
             # 3. Format input payload for the graph state
             input_data = {"messages": [("user", message)]}
 
             # 4. Stream individual LLM tokens as they're generated (true
-            #    token-by-token streaming).
+            #    token-by-token streaming, per architecture step 12).
             #    "messages" mode yields (message_chunk, metadata) tuples.
             async for msg_chunk, metadata in graph.astream(
                 input_data, config=config, stream_mode="messages"
@@ -37,7 +43,7 @@ async def handle_chat_stream(message: str, thread_id: str) -> StreamingResponse:
                     yield f"data: {msg_chunk.content}\n\n"
 
             yield "data: [DONE]\n\n"
-            
+
         except Exception as e:
             yield f"data: Error: {str(e)}\n\n"
 
