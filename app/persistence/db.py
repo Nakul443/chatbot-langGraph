@@ -7,8 +7,7 @@ from psycopg_pool import AsyncConnectionPool
 
 load_dotenv()
 
-
-DB_URI = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/postgres")
+DB_URI = os.getenv("DATABASE_URL")
 
 # asynchronous connection pool for PostgreSQL
 # autocommit=True is required: LangGraph's checkpointer.setup() runs

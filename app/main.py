@@ -20,8 +20,9 @@ async def lifespan(app: FastAPI):
     """
     await connection_pool.open()
 
+    # builds an AsyncPostgresSaver checkpointer and sets up the necessary tables in the database
     checkpointer = await get_checkpointer()
-    await checkpointer.setup()
+    await checkpointer.setup() # creates checkpoint tables if they don't exist
 
     yield
     

@@ -5,6 +5,8 @@ from fastapi.responses import StreamingResponse
 from app.persistence.db import get_checkpointer
 from app.graph.builder import build_graph_with_checkpointer
 
+# when user sends a message
+# it hits the /chat/stream endpoint with {message, thread_id} + Authorization: Bearer <jwt> header
 async def handle_chat_stream(message: str, thread_id: str, user_id: str) -> StreamingResponse:
     """
     Handles the core business logic for streaming chat responses using LangGraph and PostgreSQL.
