@@ -2,10 +2,7 @@
 
 from langchain_openai import ChatOpenAI
 from app.graph.state import State
-from app.tools.mcp_tools import tools
-
-# Bind tools so the model can decide to call them
-model = ChatOpenAI(model="gpt-4o", temperature=0.7).bind_tools(tools)
+from app.tools.mcp_tools import get_mcp_tools
 
 
 async def chatbot_node(state: State) -> dict:
@@ -17,6 +14,12 @@ async def chatbot_node(state: State) -> dict:
     - the LLM itself decides (via tool_calls on the returned message) whether
       to route to the tools node or finish with a final answer.
     """
+
+    # Dynamically fetch real MCP tools at runtime
+    tools = await get_mcp_tools()
+
+    # Bind tools so the model can decide to call them dynamically
+    model = ChatOpenAI(model="gpt-4o", temperature=0.7).bind_tools(tools)
 
     # extract the current message history from the state
     messages = state["messages"]

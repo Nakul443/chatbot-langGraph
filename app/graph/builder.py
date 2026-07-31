@@ -4,13 +4,16 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode, tools_condition
 from app.graph.state import State
 from app.graph.nodes import chatbot_node
-from app.tools.mcp_tools import tools
+from app.tools.mcp_tools import get_mcp_tools
 
 
 def _add_nodes_and_edges(workflow: StateGraph) -> StateGraph:
     # Nodes
     workflow.add_node("chatbot", chatbot_node)
-    workflow.add_node("tools", ToolNode(tools))  # MCP Tool node
+    
+    # Since MCP tools are loaded dynamically at runtime via async, 
+    # we initialize the ToolNode with an empty list here, and handle tool execution dynamically.
+    workflow.add_node("tools", ToolNode(tools=[]))  # MCP Tool node
 
     # Entry point
     workflow.add_edge(START, "chatbot")

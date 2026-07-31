@@ -2,22 +2,24 @@
 # Replace these stub tools with real MCP client calls
 # (e.g. via langchain-mcp-adapters) when your MCP server is ready.
 
-from langchain_core.tools import tool
+import sys
+import os
+from langchain_mcp_adapters.client import MultiServerMCPClient
 
-
-@tool
-def get_project_status(project_name: str) -> str:
-    """Look up the current status of a named project."""
-    # TODO: replace with a real MCP tool call / DB / API lookup
-    return f"Project '{project_name}' is currently on track. Last update: 2 days ago."
-
-
-@tool
-def search_documents(query: str) -> str:
-    """Search internal documents/files for a given query."""
-    # TODO: replace with a real MCP tool call (file search, vector DB, etc.)
-    return f"Found 3 documents matching '{query}'."
-
-
-# All tools exposed to the graph
-tools = [get_project_status, search_documents]
+async def get_mcp_tools():
+    """
+    Dynamically initializes an MCP client connection to the local server 
+    and loads real runtime tools via langchain-mcp-adapters.
+    """
+    # Configure the client to spin up our server script via stdio
+    client = MultiServerMCPClient({
+        "project_server": {
+            "transport": "stdio",
+            "command": sys.executable,  # Uses the active virtual environment python interpreter
+            "args": [os.path.abspath("app/tools/server.py")],
+        }
+    })
+    
+    # Retrieve and return the dynamically discovered tools
+    tools = await client.get_tools()
+    return tools
