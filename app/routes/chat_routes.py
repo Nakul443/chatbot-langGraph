@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+
 from app.controllers.chat_controller import handle_chat_stream
 
 router = APIRouter(prefix="/chat", tags=["Chat"])

@@ -4,15 +4,16 @@
 # (routes/controllers) can scope data (e.g. thread_id ownership) to that user.
 
 import os
+
 import jwt
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-JWT_SECRET = os.getenv("JWT_SECRET_KEY")
+JWT_SECRET = os.getenv("JWT_SECRET_KEY","")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 
-PUBLIC_PATHS = {"/health", "/docs", "/openapi.json", "/redoc"}
+PUBLIC_PATHS = {"/health", "/docs", "/openapi.json", "/redoc", "/auth/signup", "/auth/login"}
 
 
 class AuthMiddleware(BaseHTTPMiddleware):

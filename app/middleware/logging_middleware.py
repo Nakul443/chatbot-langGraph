@@ -1,7 +1,8 @@
 # file for request tracking and logging
 
-import time
 import logging
+import time
+
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 

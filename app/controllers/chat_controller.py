@@ -2,8 +2,11 @@
 
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
-from app.persistence.db import get_checkpointer
+from langchain_core.runnables import RunnableConfig
+
 from app.graph.builder import build_graph_with_checkpointer
+from app.persistence.db import get_checkpointer
+
 
 # when user sends a message
 # it hits the /chat/stream endpoint with {message, thread_id} + Authorization: Bearer <jwt> header
@@ -29,7 +32,7 @@ async def handle_chat_stream(message: str, thread_id: str, user_id: str) -> Stre
             graph = await build_graph_with_checkpointer(checkpointer)
 
             # 2. Configure thread isolation (scoped to the authenticated user)
-            config = {"configurable": {"thread_id": scoped_thread_id}}
+            config: RunnableConfig = {"configurable": {"thread_id": scoped_thread_id}}
 
             # 3. Format input payload for the graph state
             input_data = {"messages": [("user", message)]}
@@ -41,12 +44,13 @@ async def handle_chat_stream(message: str, thread_id: str, user_id: str) -> Stre
                 input_data, config=config, stream_mode="messages"
             ):
                 # Only stream tokens coming from the chatbot node, not tool nodes
-                if metadata.get("langgraph_node") == "chatbot" and msg_chunk.content:
-                    yield f"data: {msg_chunk.content}\n\n"
+                content = getattr(msg_chunk, "content", msg_chunk)
+                if isinstance(metadata, dict) and metadata.get("langgraph_node") == "chatbot" and content:
+                    yield f"data: {content}\n\n"
 
             yield "data: [DONE]\n\n"
 
         except Exception as e:
-            yield f"data: Error: {str(e)}\n\n"
+            yield f"data: Error: {e!s}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

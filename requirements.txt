@@ -14,6 +14,8 @@ psycopg[binary]  # Required by the PostgresSaver
 
 # Auth
 pyjwt
+bcrypt
+pydantic[email]
 
 # Environment & Utilities
 python-dotenv
@@ -25,3 +27,4 @@ langsmith
 # MCP server
 langchain-mcp-adapters>=0.3.0
 mcp>=1.0.0
+fastmcp>=2.0.0
