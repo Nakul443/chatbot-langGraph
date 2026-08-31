@@ -20,6 +20,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if request.url.path in PUBLIC_PATHS:
             return await call_next(request)
+        # if this runs, we don't really need the JWT to avoid the chicken-egg problem
+        # this line checks for the Authorization header and validates the JWT token.
+        # If valid, it extracts the user_id and attaches it to request.state.user_id for downstream use.
+        # If invalid or missing, it returns a 401 Unauthorized response.
 
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):

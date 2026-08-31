@@ -16,6 +16,7 @@ async def signup_user(email: str, password: str) -> TokenResponse:
         if existing:
             raise HTTPException(status_code=409, detail="Email already registered.")
 
+        # insert the new user into the database and return the generated user ID
         await cur.execute(
             """
             INSERT INTO users (email, password_hash)

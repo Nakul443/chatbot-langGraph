@@ -3,6 +3,15 @@
 # initializes the compiled graph with the AsyncPostgresSaver checkpointer,
 # and provides an asynchronous endpoint that streams the chat responses back token-by-token using Server-Sent Events (SSE)
 
+import os
+import sys
+
+# Allows running this file directly (`python3 main.py` from inside app/, or
+# `python3 app/main.py` from the project root) by making sure the project
+# root is on sys.path before the `app.*` imports below are resolved.
+# Not needed when running via `uvicorn app.main:app --reload` from the root.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -48,3 +57,13 @@ app.include_router(auth_router)
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "service": "langgraph-mcp-chatbot"}
+
+
+if __name__ == "__main__":
+    # Lets you run this with `python3 main.py` instead of the uvicorn CLI command.
+    # Note: --reload is NOT available this way (it needs an import string, not
+    # this app object) -- use `uvicorn app.main:app --reload` from the project
+    # root if you want hot-reload during development.
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=8000)
