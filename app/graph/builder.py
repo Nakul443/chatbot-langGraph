@@ -25,7 +25,10 @@ async def _add_nodes_and_edges(workflow: StateGraph) -> StateGraph:
     workflow.add_conditional_edges(
         "chatbot",
         tools_condition,
-        {"tools": "tools", END: END},
+        {
+            "tools": "tools",
+            END: END
+        },
     )
 
     # After running a tool, loop back to the chatbot so it can use the result
