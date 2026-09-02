@@ -14,3 +14,5 @@ class State(TypedDict):
     rather than overwriting previous turns.
     """
     messages: Annotated[list[BaseMessage], add_messages]
+    user_id: str
+    pending_upload: dict | None

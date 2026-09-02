@@ -35,7 +35,10 @@ async def handle_chat_stream(message: str, thread_id: str, user_id: str) -> Stre
             config: RunnableConfig = {"configurable": {"thread_id": scoped_thread_id}}
 
             # 3. Format input payload for the graph state
-            input_data = {"messages": [("user", message)]}
+            input_data = {
+                "messages": [("user", message)],
+                "user_id": user_id,
+            }
 
             # 4. Stream individual LLM tokens as they're generated (true
             #    token-by-token streaming, per architecture step 12).

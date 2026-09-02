@@ -12,8 +12,7 @@ os.environ["OPENAI_API_KEY"] = "mock-openai-key"
 from app.graph.builder import build_graph
 from app.tools import server
 
-# Resolve the dynamically exposed RAG tool without relying on static import
-# analysis to recognize it as a module-level symbol.
+# Resolve the dynamically exposed RAG tool.
 search_rag = getattr(server, "search_rag")
 web_search = server.web_search
 
