@@ -1,11 +1,10 @@
 # Password hashing + JWT creation, shared by the auth routes and
 # read by app/middleware/auth_middleware.py (must use the same secret/algorithm).
 
-import hashlib
 import os
-import secrets
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 import jwt
 
 JWT_SECRET = os.getenv("JWT_SECRET_KEY", "")
@@ -13,18 +12,19 @@ JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "1440"))  # default 24h
 
 def hash_password(password: str) -> str:
-    salt = secrets.token_bytes(16)
-    key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 100000)
-    return f"{salt.hex()}${key.hex()}"
+    """Hashes a plain-text password using bcrypt."""
+    pwd_bytes = password.encode("utf-8")
+    salt = bcrypt.gensalt()
+    hashed_bytes = bcrypt.hashpw(pwd_bytes, salt)
+    return hashed_bytes.decode("utf-8")
 
 
 def verify_password(password: str, password_hash: str) -> bool:
+    """Verifies a plain-text password against a bcrypt hash."""
     try:
-        salt_hex, key_hex = password_hash.split("$")
-        salt = bytes.fromhex(salt_hex)
-        key = bytes.fromhex(key_hex)
-        new_key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 100000)
-        return secrets.compare_digest(key, new_key)
+        pwd_bytes = password.encode("utf-8")
+        hash_bytes = password_hash.encode("utf-8")
+        return bcrypt.checkpw(pwd_bytes, hash_bytes)
     except Exception:
         return False
 

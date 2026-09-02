@@ -2,22 +2,65 @@
 
 from fastmcp import FastMCP
 import os
+import requests
 
 # Initialize the FastMCP server instance
 mcp = FastMCP("ProjectNotesServer")
 
 @mcp.tool()
-def get_project_status(project_name: str) -> str:
-    """Get the current operational and deployment status of a specified project."""
-    # Real logic can query a database, read a file, or check an API
-    return f"Project '{project_name}' is currently active, containerized via Docker, and passing all checks."
+def search_rag(query: str) -> str:
+    """Search the Legal-RAG knowledge base using hybrid search and CrossEncoder reranking."""
+    rag_url = os.getenv("RAG_SERVICE_URL")
+    if not rag_url:
+        return "RAG service URL is not configured."
+    try:
+        response = requests.post(rag_url, json={"query": query}, timeout=15)
+        response.raise_for_status()
+        data = response.json()
+        if isinstance(data, dict):
+            if "results" in data:
+                return str(data["results"])
+            elif "response" in data:
+                return str(data["response"])
+            elif "answer" in data:
+                return str(data["answer"])
+            return str(data)
+        return str(data)
+    except Exception as e:
+        return f"Error querying RAG service: {str(e)}"
 
 @mcp.tool()
-def search_local_files(query: str) -> str:
-    """Search through local workspace directories or documentation notes for specific keywords."""
-    # Real file search simulation or actual implementation
-    return f"Found 3 matching references for query '{query}' in local markdown files."
+def web_search(query: str) -> str:
+    """Search the web for up-to-date information on a given topic."""
+    api_key = os.getenv("WEB_SEARCH_API_KEY") or os.getenv("TAVILY_API_KEY")
+    if not api_key:
+        return "Web search API key is not configured."
+    
+    try:
+        response = requests.post(
+            "https://api.tavily.com/search",
+            json={
+                "api_key": api_key,
+                "query": query,
+                "search_depth": "basic"
+            },
+            timeout=15
+        )
+        response.raise_for_status()
+        data = response.json()
+        results = data.get("results", [])
+        if not results:
+            return "No web search results found."
+        
+        formatted_results = []
+        for r in results[:5]:  # Limit to top 5 results
+            formatted_results.append(
+                f"Title: {r.get('title')}\nURL: {r.get('url')}\nSnippet: {r.get('content')}\n"
+            )
+        return "\n".join(formatted_results)
+    except Exception as e:
+        return f"Error performing web search: {str(e)}"
 
 if __name__ == "__main__":
-    # Run via stdio transport so the client process can communicate with it securely
-    mcp.run(transport="stdio")
+    # Run via streamable-http transport so the server can be reached as a network service
+    mcp.run(transport="streamable-http")

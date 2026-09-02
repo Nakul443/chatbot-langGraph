@@ -2,9 +2,10 @@
 # Connects to app/tools/server.py (a FastMCP server) and loads real,
 # runtime-discovered tools via langchain-mcp-adapters.
 
-import sys
-import os
 import asyncio
+import os
+from typing import Any
+
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
 _client: MultiServerMCPClient | None = None
@@ -31,13 +32,22 @@ async def get_mcp_tools():
         if _tools_cache is not None:
             return _tools_cache
 
-        _client = MultiServerMCPClient({
-            "project_server": {
-                "transport": "stdio",
-                "command": sys.executable,  # Uses the active virtual environment's python interpreter
-                "args": [os.path.abspath("app/tools/server.py")],
+        mcp_server_url = os.getenv("MCP_SERVER_URL", "http://localhost:8000/sse")
+        mcp_auth_token = os.getenv("MCP_AUTH_TOKEN")
+
+        connection_config: dict[str, Any] = {
+            "transport": "streamable_http",
+            "url": mcp_server_url,
+        }
+        if mcp_auth_token:
+            connection_config["headers"] = {
+                "Authorization": f"Bearer {mcp_auth_token}"
             }
-        })
+
+        connections: dict[str, Any] = {
+            "project_server": connection_config
+        }
+        _client = MultiServerMCPClient(connections)
 
         _tools_cache = await _client.get_tools()
 
