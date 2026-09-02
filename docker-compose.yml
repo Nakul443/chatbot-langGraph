@@ -7,8 +7,19 @@ services:
       - .env
     depends_on:
       - postgres
+      - mcp-server
     volumes:
       - .:/app
+
+  mcp-server:
+    build: .
+    ports:
+      - "8002:8002"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    command: python app/tools/server.py
 
   postgres:
     image: postgres:16

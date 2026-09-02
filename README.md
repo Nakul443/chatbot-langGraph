@@ -63,7 +63,8 @@ chatbot-langGraph-main/
 | `app/graph/state.py` | Defines the `State` TypedDict (`messages`, using the `add_messages` reducer so history appends instead of overwriting). |
 | `app/graph/nodes.py` | The `chatbot_node` — invokes `ChatOpenAI` (with tools bound) on the current message history. |
 | `app/graph/builder.py` | Wires up the graph: `START → chatbot`, conditional edge to `tools` or `END`, and `tools → chatbot` loop. Compiles with/without a checkpointer. |
-| `app/tools/mcp_tools.py` | Tool functions exposed to the LLM (stubbed here — swap for real MCP client calls). |
+| `app/tools/mcp_tools.py` | Tool definitions connected asynchronously to the network-available FastMCP server (`app/tools/server.py`). |
+| `app/tools/server.py` | FastMCP server exposing authenticated `search_rag` and `web_search` tools. |
 | `app/persistence/db.py` | Owns the `AsyncConnectionPool` and exposes `get_checkpointer()`. |
 | `tests/test_graph.py` | Placeholder for graph/unit tests. |
 | `Dockerfile` / `docker-compose.yml` | Containerize the API + spin up a local Postgres instance. |
@@ -73,7 +74,7 @@ chatbot-langGraph-main/
 ### Option A — Docker (recommended)
 ```bash
 cp .env.example .env
-# fill in OPENAI_API_KEY in .env
+# fill in OPENAI_API_KEY, WEB_SEARCH_API_KEY, RAG_SERVICE_URL, and MCP_AUTH_TOKEN in .env
 docker compose up --build
 ```
 API available at `http://localhost:8000`.
@@ -97,14 +98,31 @@ curl -N -X POST http://localhost:8000/chat/stream \
 ```
 Reusing the same `thread_id` continues the same conversation (state loaded from Postgres).
 
-## 5. Project Description
+## 5. RAG Service Contract & Integration Requirements
+
+The `search_rag` tool makes an outgoing HTTP request to your external Legal-RAG microservice (`RAG_SERVICE_URL`). To ensure successful communication between services, your RAG pipeline service must adhere to the following contract:
+
+- **Protocol & Endpoint**: `POST` request to `RAG_SERVICE_URL` (e.g., `http://rag-service:8001/query`).
+- **Request Body**: JSON formatted payload containing the `query` field:
+  ```json
+  {
+    "query": "Your search or question here"
+  }
+  ```
+- **Response Format**: Must return a JSON object with one of the following fields containing the string results or context data:
+  - `results` (e.g. `{"results": [...]}`)
+  - `response` (e.g. `{"response": "..."}`)
+  - `answer` (e.g. `{"answer": "..."}`)
+  - Fallback: The tool will stringify and return the entire returned JSON dictionary/value if none of the above are matched.
+
+## 6. Project Description
 
 This project is a backend template for building **stateful, tool-using chatbots** on top of LangGraph. Instead of holding conversation memory in-process (which breaks on restarts/multiple workers), it persists every turn to PostgreSQL via LangGraph's checkpointer, so conversations survive restarts and scale across multiple API instances. The LLM node can autonomously decide to call external tools (MCP-style) mid-conversation, loop back with results, and produce a final answer — all streamed to the client token-by-token over SSE for a responsive chat UI.
 
 ## 6. Notes / Possible Next Steps
 
 - **Auth**: no authentication/session validation currently exists — add an auth middleware or dependency (e.g. JWT/session cookie check) before trusting `thread_id`, otherwise any client can read/write any thread's history.
-- **Real MCP integration**: `mcp_tools.py` currently has stub tools. Swap in `langchain-mcp-adapters` (or your MCP server's client) to call real MCP tools.
+- **Real MCP integration**: Integrated complete network-available FastMCP server (`app/tools/server.py`) using Bearer Token authorization. Customize the `search_rag` and `web_search` tools to query your custom backend microservices.
 - **Graph caching**: the graph is rebuilt on every request; since it's cheap and stateless besides the checkpointer, this is fine, but you could cache the compiled graph at app startup if you want to shave off overhead.
 - **Error handling**: `chat_controller.py` currently swallows exceptions into an SSE error event — consider structured error codes for the frontend.
 - **Testing**: `tests/test_graph.py` is currently empty — add tests that exercise the tool-calling branch with a mocked LLM.

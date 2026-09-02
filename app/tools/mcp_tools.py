@@ -32,7 +32,7 @@ async def get_mcp_tools():
         if _tools_cache is not None:
             return _tools_cache
 
-        mcp_server_url = os.getenv("MCP_SERVER_URL", "http://localhost:8000/sse")
+        mcp_server_url = os.getenv("MCP_SERVER_URL", "http://mcp-server:8002/mcp")
         mcp_auth_token = os.getenv("MCP_AUTH_TOKEN")
 
         connection_config: dict[str, Any] = {

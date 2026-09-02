@@ -1,8 +1,39 @@
 # server file using fastMCP
 
-from fastmcp import FastMCP
 import os
+
 import requests
+from fastmcp import FastMCP
+from starlette.middleware import Middleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
+
+
+# Define Authorization Middleware for security
+# this function checks for the presence of a valid Bearer token in the Authorization header of incoming requests to the MCP server.
+# If the token is missing or invalid, it returns a 401 Unauthorized response.
+class BearerAuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        # We only protect HTTP/SSE routes, typically /mcp or sub-endpoints
+        # Skip health check or general endpoints if necessary
+        if request.url.path.startswith("/mcp"):
+            expected_token = os.getenv("MCP_AUTH_TOKEN")
+            if expected_token:
+                auth_header = request.headers.get("Authorization")
+                if not auth_header or not auth_header.startswith("Bearer "):
+                    return JSONResponse(
+                        {"detail": "Unauthorized: Missing or invalid Authorization header"},
+                        status_code=401
+                    )
+                token = auth_header.split(" ", 1)[1]
+                if token != expected_token:
+                    return JSONResponse(
+                        {"detail": "Unauthorized: Invalid token"},
+                        status_code=401
+                    )
+        
+        response = await call_next(request)
+        return response
 
 # Initialize the FastMCP server instance
 mcp = FastMCP("ProjectNotesServer")
@@ -26,8 +57,10 @@ def search_rag(query: str) -> str:
                 return str(data["answer"])
             return str(data)
         return str(data)
+    except requests.RequestException as e:
+        return f"Error querying RAG service: {e}"
     except Exception as e:
-        return f"Error querying RAG service: {str(e)}"
+        return f"Unexpected error querying RAG service: {e}"
 
 @mcp.tool()
 def web_search(query: str) -> str:
@@ -58,9 +91,16 @@ def web_search(query: str) -> str:
                 f"Title: {r.get('title')}\nURL: {r.get('url')}\nSnippet: {r.get('content')}\n"
             )
         return "\n".join(formatted_results)
+    except requests.RequestException as e:
+        return f"Error performing web search: {e}"
     except Exception as e:
-        return f"Error performing web search: {str(e)}"
+        return f"Unexpected error performing web search: {e}"
 
 if __name__ == "__main__":
-    # Run via streamable-http transport so the server can be reached as a network service
-    mcp.run(transport="streamable-http")
+    # Run via streamable-http transport on port 8002 so it can be reached as a network service
+    mcp.run(
+        transport="streamable-http",
+        host="0.0.0.0",
+        port=8002,
+        middleware=[Middleware(BearerAuthMiddleware)]
+    )

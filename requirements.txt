@@ -20,6 +20,7 @@ pydantic[email]
 # Environment & Utilities
 python-dotenv
 pydantic-settings
+requests
 
 # Observability
 langsmith

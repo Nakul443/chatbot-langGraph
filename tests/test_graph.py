@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 # Set dummy env vars for testing before importing modules that might expect them
 os.environ["RAG_SERVICE_URL"] = "http://mock-rag/query"
 os.environ["WEB_SEARCH_API_KEY"] = "mock-tavily-key"
-os.environ["MCP_SERVER_URL"] = "http://mock-mcp/sse"
+os.environ["MCP_SERVER_URL"] = "http://mock-mcp/mcp"
 os.environ["OPENAI_API_KEY"] = "mock-openai-key"
 
 from app.graph.builder import build_graph
@@ -34,7 +34,7 @@ class TestMCPTools(unittest.TestCase):
     def test_search_rag_failure(self, mock_post):
         mock_post.side_effect = Exception("Connection error")
         result = search_rag("test query")
-        self.assertIn("Error querying RAG service", result)
+        self.assertIn("querying rag service", result.lower())
 
     @patch("app.tools.server.requests.post")
     def test_web_search_success(self, mock_post):
