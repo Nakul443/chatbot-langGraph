@@ -1,6 +1,8 @@
 # file to handle the core business logic for streaming chat responses using LangGraph and PostgreSQL
 
-from fastapi import HTTPException
+import base64
+
+from fastapi import HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from langchain_core.runnables import RunnableConfig
 
@@ -47,6 +49,60 @@ async def handle_chat_stream(message: str, thread_id: str, user_id: str) -> Stre
                 input_data, config=config, stream_mode="messages"
             ):
                 # Only stream tokens coming from the chatbot node, not tool nodes
+                content = getattr(msg_chunk, "content", msg_chunk)
+                if isinstance(metadata, dict) and metadata.get("langgraph_node") == "chatbot" and content:
+                    yield f"data: {content}\n\n"
+
+            yield "data: [DONE]\n\n"
+
+        except Exception as e:
+            yield f"data: Error: {e!s}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+async def handle_chat_upload(file: UploadFile, thread_id: str, user_id: str) -> StreamingResponse:
+    """
+    Handles file upload, converts it to base64, updates the graph state with
+    the file and triggers an ingestion instruction message in the stream.
+    """
+    if not file:
+        raise HTTPException(status_code=400, detail="No file was uploaded.")
+
+    if not thread_id:
+        raise HTTPException(status_code=400, detail="thread_id is required for state management.")
+
+    # Read and encode file content to base64
+    try:
+        file_bytes = await file.read()
+        content_b64 = base64.b64encode(file_bytes).decode("utf-8")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to read file: {e!s}")
+
+    scoped_thread_id = f"{user_id}:{thread_id}"
+
+    async def event_generator():
+        try:
+            checkpointer = await get_checkpointer()
+            graph = await build_graph_with_checkpointer(checkpointer)
+
+            config: RunnableConfig = {"configurable": {"thread_id": scoped_thread_id}}
+
+            # Format the trigger message so LLM knows a file has been uploaded and can decide to call ingest_pdf
+            trigger_message = f"I've uploaded `{file.filename}` — please index it."
+
+            input_data = {
+                "messages": [("user", trigger_message)],
+                "user_id": user_id,
+                "pending_upload": {
+                    "filename": file.filename,
+                    "content_b64": content_b64
+                }
+            }
+
+            async for msg_chunk, metadata in graph.astream(
+                input_data, config=config, stream_mode="messages"
+            ):
                 content = getattr(msg_chunk, "content", msg_chunk)
                 if isinstance(metadata, dict) and metadata.get("langgraph_node") == "chatbot" and content:
                     yield f"data: {content}\n\n"

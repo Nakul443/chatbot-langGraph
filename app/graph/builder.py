@@ -1,22 +1,21 @@
 # file to build and compile the entire graph
 
 from langgraph.graph import END, START, StateGraph
-from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.prebuilt import tools_condition
 
 from app.graph.nodes import chatbot_node
 from app.graph.state import State
+from app.graph.tool_executor import custom_tool_executor
 from app.tools.mcp_tools import get_mcp_tools
 
 
 async def _add_nodes_and_edges(workflow: StateGraph) -> StateGraph:
-    # Fetch the real MCP tools (cached after first call, see mcp_tools.py) so
-    # the ToolNode actually has tools to execute. Previously this was
-    # ToolNode(tools=[]), so any tool_call the LLM made could never resolve.
-    tools = await get_mcp_tools()
+    # Warm up the real MCP tools cache (cached after first call, see mcp_tools.py)
+    await get_mcp_tools()
 
     # Nodes
     workflow.add_node("chatbot", chatbot_node)
-    workflow.add_node("tools", ToolNode(tools=tools))  # MCP Tool node (steps 6-8)
+    workflow.add_node("tools", custom_tool_executor)  # Custom parameter-injecting tool executor node (steps 6-8)
 
     # Entry point
     workflow.add_edge(START, "chatbot")

@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 # Set dummy env vars for testing before importing modules that might expect them
-os.environ["RAG_SERVICE_URL"] = "http://mock-rag/query"
+os.environ["LEGAL_RAG_MCP_URL"] = "http://mock-rag/mcp"
 os.environ["WEB_SEARCH_API_KEY"] = "mock-tavily-key"
 os.environ["MCP_SERVER_URL"] = "http://mock-mcp/mcp"
 os.environ["OPENAI_API_KEY"] = "mock-openai-key"
@@ -12,34 +12,10 @@ os.environ["OPENAI_API_KEY"] = "mock-openai-key"
 from app.graph.builder import build_graph
 from app.tools import server
 
-# Resolve the dynamically exposed RAG tool.
-search_rag = getattr(server, "search_rag")
 web_search = server.web_search
 
 
 class TestMCPTools(unittest.TestCase):
-    @patch("app.tools.server.requests.post")
-    def test_search_rag_success(self, mock_post):
-        # Mock successful RAG response
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"results": "Test RAG result matches search."}
-        mock_response.raise_for_status = MagicMock()
-        mock_post.return_value = mock_response
-
-        result = search_rag("test query")
-        self.assertIn("Test RAG result", result)
-        mock_post.assert_called_once_with(
-            "http://mock-rag/query",
-            json={"query": "test query"},
-            timeout=15
-        )
-
-    @patch("app.tools.server.requests.post")
-    def test_search_rag_failure(self, mock_post):
-        mock_post.side_effect = Exception("Connection error")
-        result = search_rag("test query")
-        self.assertIn("querying rag service", result.lower())
-
     @patch("app.tools.server.requests.post")
     def test_web_search_success(self, mock_post):
         # Mock successful Tavily response

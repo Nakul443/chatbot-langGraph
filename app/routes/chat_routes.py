@@ -1,10 +1,10 @@
 # file to define the chat routes for the FastAPI application
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from app.controllers.chat_controller import handle_chat_stream
+from app.controllers.chat_controller import handle_chat_stream, handle_chat_upload
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
@@ -23,3 +23,20 @@ async def chat_stream(request: ChatRequest, http_request: Request) -> StreamingR
     """
     user_id = http_request.state.user_id # set by authMiddleware after JWT verification
     return await handle_chat_stream(request.message, request.thread_id, user_id)
+
+
+# POST: /chat/upload
+@router.post("/upload")
+async def chat_upload(
+    http_request: Request,
+    file: UploadFile = File(...),
+    thread_id: str = Form(...)
+) -> StreamingResponse:
+    """
+    HTTP route endpoint for uploading a PDF file.
+    Validates file, triggers the graph execution with the file payload
+    in the state, and streams the response back to the client.
+    `user_id` is set by AuthMiddleware after verifying the JWT.
+    """
+    user_id = http_request.state.user_id # set by authMiddleware after JWT verification
+    return await handle_chat_upload(file, thread_id, user_id)
