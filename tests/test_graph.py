@@ -10,7 +10,12 @@ os.environ["MCP_SERVER_URL"] = "http://mock-mcp/mcp"
 os.environ["OPENAI_API_KEY"] = "mock-openai-key"
 
 from app.graph.builder import build_graph
-from app.tools.server import search_rag, web_search
+from app.tools import server
+
+# Resolve the dynamically exposed RAG tool without relying on static import
+# analysis to recognize it as a module-level symbol.
+search_rag = getattr(server, "search_rag")
+web_search = server.web_search
 
 
 class TestMCPTools(unittest.TestCase):

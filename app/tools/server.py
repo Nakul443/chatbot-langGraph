@@ -39,30 +39,6 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
 mcp = FastMCP("ProjectNotesServer")
 
 @mcp.tool()
-def search_rag(query: str) -> str:
-    """Search the Legal-RAG knowledge base using hybrid search and CrossEncoder reranking."""
-    rag_url = os.getenv("RAG_SERVICE_URL")
-    if not rag_url:
-        return "RAG service URL is not configured."
-    try:
-        response = requests.post(rag_url, json={"query": query}, timeout=15)
-        response.raise_for_status()
-        data = response.json()
-        if isinstance(data, dict):
-            if "results" in data:
-                return str(data["results"])
-            elif "response" in data:
-                return str(data["response"])
-            elif "answer" in data:
-                return str(data["answer"])
-            return str(data)
-        return str(data)
-    except requests.RequestException as e:
-        return f"Error querying RAG service: {e}"
-    except Exception as e:
-        return f"Unexpected error querying RAG service: {e}"
-
-@mcp.tool()
 def web_search(query: str) -> str:
     """Search the web for up-to-date information on a given topic."""
     api_key = os.getenv("WEB_SEARCH_API_KEY") or os.getenv("TAVILY_API_KEY")

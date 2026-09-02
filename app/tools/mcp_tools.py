@@ -44,8 +44,21 @@ async def get_mcp_tools():
                 "Authorization": f"Bearer {mcp_auth_token}"
             }
 
+        legal_rag_mcp_url = os.getenv("LEGAL_RAG_MCP_URL", "http://localhost:8003/mcp")
+        legal_rag_auth_token = os.getenv("LEGAL_RAG_AUTH_TOKEN")
+
+        legal_rag_connection_config: dict[str, Any] = {
+            "transport": "streamable_http",
+            "url": legal_rag_mcp_url,
+        }
+        if legal_rag_auth_token:
+            legal_rag_connection_config["headers"] = {
+                "Authorization": f"Bearer {legal_rag_auth_token}"
+            }
+
         connections: dict[str, Any] = {
-            "project_server": connection_config
+            "project_server": connection_config,
+            "legal_rag_server": legal_rag_connection_config,
         }
         _client = MultiServerMCPClient(connections)
 
