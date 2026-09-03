@@ -52,9 +52,19 @@ export const apiService = {
     });
 
     if (!res.ok) {
-      const data = await res.json();
+      const data = await res.json().catch(() => ({ error: 'File upload failed' }));
       throw new Error(data.error || 'File upload failed');
     }
-    return res.json();
+
+    // Read the stream to completion to ensure the upload and ingestion are fully processed
+    const reader = res.body?.getReader();
+    if (reader) {
+      while (true) {
+        const { done } = await reader.read();
+        if (done) break;
+      }
+    }
+
+    return res;
   }
 };

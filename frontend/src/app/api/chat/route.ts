@@ -76,8 +76,14 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: errText || 'Upload failed' }, { status: res.status });
       }
 
-      const data = await res.json();
-      return NextResponse.json(data);
+      // Handle stream proxying
+      return new NextResponse(res.body, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
+      });
     } else {
       // JSON streaming or regular call
       const body = await request.json();
