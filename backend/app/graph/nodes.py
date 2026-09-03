@@ -1,9 +1,8 @@
 # LLM processing logic
 
-from langchain_openai import ChatOpenAI
-
 from app.graph.state import State
 from app.tools.mcp_tools import get_mcp_tools
+from langchain_openai import ChatOpenAI
 
 _model_with_tools = None
 # this global variable will hold the tool-bound model instance, which is built once and reused across invocations.

@@ -141,6 +141,11 @@ async def handle_get_threads(user_id: str) -> list[dict]:
     # async with connection pool is responsible for acquiring and releasing a connection from the pool
     # a single `async with` statement is used with multiple contexts to optimize resource management
     # the query uses a parameterized LIKE clause to filter threads belonging to the user
+    # the point of thse two loops was to strip the user_id prefix from the thread_id before returning it to the client
+
+    # It runs a SQL query against Postgres asking "give me every row where the thread key starts with <user_id>:",
+    # using a connection borrowed from the pool,
+    # and pulls all the matching rows back as a list of dictionaries (one dict per row, column names as keys)
     async with connection_pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
         await cur.execute(query, (f"{user_id}:%",))
         rows = await cur.fetchall()
