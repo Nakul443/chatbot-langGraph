@@ -13,6 +13,7 @@
 from typing import Any
 
 from langchain_core.messages import ToolMessage
+
 from app.graph.state import State
 from app.tools.mcp_tools import get_mcp_tools
 
@@ -52,10 +53,41 @@ async def custom_tool_executor(state: State) -> dict[str, Any]:
         # 2. Inject pending file uploads for ingest_pdf
         if name == "ingest_pdf":
             ingest_called = True
-            pending = state.get("pending_upload")
+            pending = state.get("pending_upload")  # list of dicts
             if pending:
-                args["file_base64"] = pending.get("content_b64")
-                args["filename"] = pending.get("filename")
+                requested_filename = args.get("filename")
+                matched_file = None
+                
+                if requested_filename:
+                    # 1. Exact match
+                    matched_file = next((f for f in pending if f.get("filename") == requested_filename), None)
+                    
+                    # 2. Case-insensitive match
+                    if not matched_file:
+                        matched_file = next((f for f in pending if f.get("filename", "").lower() == requested_filename.lower()), None)
+                        
+                    # 3. Substring match
+                    if not matched_file:
+                        matched_file = next((f for f in pending if requested_filename.lower() in f.get("filename", "").lower() or f.get("filename", "").lower() in requested_filename.lower()), None)
+
+                # 4. Fallback to the first/only file if there's only one pending upload and no specific filename was requested
+                if not matched_file and len(pending) == 1 and not requested_filename:
+                    matched_file = pending[0]
+                    
+                if matched_file:
+                    args["file_base64"] = matched_file.get("content_b64")
+                    # Ensure we use the exact filename from the uploaded file
+                    args["filename"] = matched_file.get("filename")
+                else:
+                    available_files = ", ".join(f"'{f.get('filename')}'" for f in pending)
+                    tool_outputs.append(
+                        ToolMessage(
+                            content=f"Error: Could not find a pending upload matching the filename '{requested_filename}'. Available uploads: {available_files}.",
+                            name=name,
+                            tool_call_id=tool_id,
+                        )
+                    )
+                    continue
             else:
                 # If the LLM tries to call ingest_pdf but there is no file uploaded,
                 # return an error output so the LLM can explain it to the user.

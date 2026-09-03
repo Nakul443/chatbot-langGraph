@@ -15,4 +15,4 @@ class State(TypedDict):
     """
     messages: Annotated[list[BaseMessage], add_messages]
     user_id: str
-    pending_upload: dict | None
+    pending_upload: list[dict] | None

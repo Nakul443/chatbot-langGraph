@@ -9,7 +9,11 @@ os.environ["WEB_SEARCH_API_KEY"] = "mock-tavily-key"
 os.environ["MCP_SERVER_URL"] = "http://mock-mcp/mcp"
 os.environ["OPENAI_API_KEY"] = "mock-openai-key"
 
+from langchain_core.messages import AIMessage, ToolMessage
+
 from app.graph.builder import build_graph
+from app.graph.state import State
+from app.graph.tool_executor import custom_tool_executor
 from app.tools import server
 
 web_search = server.web_search
@@ -79,6 +83,130 @@ class TestGraphBuild(unittest.TestCase):
         # Check that we have nodes we expect
         self.assertIn("chatbot", graph.nodes)
         self.assertIn("tools", graph.nodes)
+
+
+class TestCustomToolExecutor(unittest.TestCase):
+    def setUp(self):
+        # Create a mock tool for ingest_pdf
+        self.mock_ingest_tool = MagicMock()
+        self.mock_ingest_tool.name = "ingest_pdf"
+        
+        async def mock_ainvoke(args):
+            return f"Successfully ingested {args.get('filename')}"
+        self.mock_ingest_tool.ainvoke = mock_ainvoke
+
+    @patch("app.graph.tool_executor.get_mcp_tools")
+    def test_multi_file_exact_match(self, mock_get_tools):
+        mock_get_tools.return_value = [self.mock_ingest_tool]
+        
+        state: State = {
+            "messages": [
+                AIMessage(
+                    content="",
+                    tool_calls=[
+                        {
+                            "name": "ingest_pdf",
+                            "args": {"filename": "contract.pdf"},
+                            "id": "call_1"
+                        }
+                    ]
+                )
+            ],
+            "user_id": "user123",
+            "pending_upload": [
+                {"filename": "receipt.pdf", "content_b64": "receipt_bytes"},
+                {"filename": "contract.pdf", "content_b64": "contract_bytes"}
+            ]
+        }
+        
+        result = asyncio.run(custom_tool_executor(state))
+        
+        self.assertIn("messages", result)
+        self.assertEqual(len(result["messages"]), 1)
+        self.assertIsInstance(result["messages"][0], ToolMessage)
+        self.assertEqual(result["messages"][0].content, "Successfully ingested contract.pdf")
+        self.assertIsNone(result["pending_upload"])
+
+    @patch("app.graph.tool_executor.get_mcp_tools")
+    def test_multi_file_case_insensitive_and_substring_match(self, mock_get_tools):
+        mock_get_tools.return_value = [self.mock_ingest_tool]
+        
+        state: State = {
+            "messages": [
+                AIMessage(
+                    content="",
+                    tool_calls=[
+                        {
+                            "name": "ingest_pdf",
+                            "args": {"filename": "CONTRACT"},
+                            "id": "call_1"
+                        }
+                    ]
+                )
+            ],
+            "user_id": "user123",
+            "pending_upload": [
+                {"filename": "receipt.pdf", "content_b64": "receipt_bytes"},
+                {"filename": "contract.pdf", "content_b64": "contract_bytes"}
+            ]
+        }
+        
+        result = asyncio.run(custom_tool_executor(state))
+        
+        self.assertEqual(result["messages"][0].content, "Successfully ingested contract.pdf")
+
+    @patch("app.graph.tool_executor.get_mcp_tools")
+    def test_single_file_fallback(self, mock_get_tools):
+        mock_get_tools.return_value = [self.mock_ingest_tool]
+        
+        # LLM calls ingest_pdf with no args or different name but there's only 1 pending upload
+        state: State = {
+            "messages": [
+                AIMessage(
+                    content="",
+                    tool_calls=[
+                        {
+                            "name": "ingest_pdf",
+                            "args": {},
+                            "id": "call_1"
+                        }
+                    ]
+                )
+            ],
+            "user_id": "user123",
+            "pending_upload": [
+                {"filename": "only_file.pdf", "content_b64": "only_bytes"}
+            ]
+        }
+        
+        result = asyncio.run(custom_tool_executor(state))
+        self.assertEqual(result["messages"][0].content, "Successfully ingested only_file.pdf")
+
+    @patch("app.graph.tool_executor.get_mcp_tools")
+    def test_missing_file_error(self, mock_get_tools):
+        mock_get_tools.return_value = [self.mock_ingest_tool]
+        
+        state: State = {
+            "messages": [
+                AIMessage(
+                    content="",
+                    tool_calls=[
+                        {
+                            "name": "ingest_pdf",
+                            "args": {"filename": "missing.pdf"},
+                            "id": "call_1"
+                        }
+                    ]
+                )
+            ],
+            "user_id": "user123",
+            "pending_upload": [
+                {"filename": "receipt.pdf", "content_b64": "receipt_bytes"}
+            ]
+        }
+        
+        result = asyncio.run(custom_tool_executor(state))
+        self.assertIn("Error: Could not find a pending upload matching the filename 'missing.pdf'", result["messages"][0].content)
 
 
 if __name__ == "__main__":

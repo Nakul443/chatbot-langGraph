@@ -61,23 +61,31 @@ async def handle_chat_stream(message: str, thread_id: str, user_id: str) -> Stre
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
-async def handle_chat_upload(file: UploadFile, thread_id: str, user_id: str) -> StreamingResponse:
+async def handle_chat_upload(files: list[UploadFile], thread_id: str, user_id: str) -> StreamingResponse:
     """
-    Handles file upload, converts it to base64, updates the graph state with
-    the file and triggers an ingestion instruction message in the stream.
+    Handles file upload, converts them to base64, updates the graph state with
+    the files and triggers an ingestion instruction message in the stream.
     """
-    if not file:
-        raise HTTPException(status_code=400, detail="No file was uploaded.")
+    if not files:
+        raise HTTPException(status_code=400, detail="No files were uploaded.")
 
     if not thread_id:
         raise HTTPException(status_code=400, detail="thread_id is required for state management.")
 
     # Read and encode file content to base64
-    try:
-        file_bytes = await file.read()
-        content_b64 = base64.b64encode(file_bytes).decode("utf-8")
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to read file: {e!s}")
+    pending_files = []
+    filenames = []
+    for file in files:
+        try:
+            file_bytes = await file.read()
+            content_b64 = base64.b64encode(file_bytes).decode("utf-8")
+            pending_files.append({
+                "filename": file.filename,
+                "content_b64": content_b64
+            })
+            filenames.append(file.filename)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Failed to read file {file.filename}: {e!s}")
 
     scoped_thread_id = f"{user_id}:{thread_id}"
 
@@ -88,16 +96,14 @@ async def handle_chat_upload(file: UploadFile, thread_id: str, user_id: str) -> 
 
             config: RunnableConfig = {"configurable": {"thread_id": scoped_thread_id}}
 
-            # Format the trigger message so LLM knows a file has been uploaded and can decide to call ingest_pdf
-            trigger_message = f"I've uploaded `{file.filename}` — please index it."
+            # Format the trigger message so LLM knows files have been uploaded and can decide to call ingest_pdf
+            filenames_str = ", ".join(f"`{name}`" for name in filenames)
+            trigger_message = f"I've uploaded the following file(s): {filenames_str} — please index them."
 
             input_data = {
                 "messages": [("user", trigger_message)],
                 "user_id": user_id,
-                "pending_upload": {
-                    "filename": file.filename,
-                    "content_b64": content_b64
-                }
+                "pending_upload": pending_files
             }
 
             async for msg_chunk, metadata in graph.astream(
