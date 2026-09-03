@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Button, Input } from '@/components/ui';
-import { KeyRound, Mail, MessageSquareCode } from 'lucide-react';
+import { MessageSquareCode } from 'lucide-react';
 
 export default function LoginPage() {
   const { login, loading, error } = useAuth();

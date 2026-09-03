@@ -5,16 +5,22 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/sidebar/Sidebar';
 import { useThreads } from '@/hooks/useThreads';
 import { useChatStore, useAuthStore } from '@/store/authStore';
 import { apiService } from '@/services/api';
 
+interface HistoryMessage {
+  id?: string;
+  role?: string;
+  content?: string;
+}
+
 export default function ChatLayout({ children }: { children: React.ReactNode }) {
   const { threads, loading, refetch } = useThreads();
-  const { activeThreadId, setActiveThreadId, messages, setMessages } = useChatStore();
+  const { activeThreadId, setActiveThreadId, setMessages } = useChatStore();
   const { setAuth } = useAuthStore();
   const router = useRouter();
 
@@ -32,9 +38,9 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
         const history = await apiService.getHistory(threadId);
         // Map backend history nodes into state Messages
         if (Array.isArray(history)) {
-          const mapped = history.map((msg: any) => ({
+          const mapped = (history as HistoryMessage[]).map((msg) => ({
             id: msg.id || Math.random().toString(),
-            role: msg.role === 'user' ? 'user' : 'assistant',
+            role: msg.role === 'user' ? 'user' : 'assistant' as const,
             content: msg.content || '',
           }));
           setMessages(mapped);

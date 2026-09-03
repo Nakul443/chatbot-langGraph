@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { useChatStream } from '@/hooks/useChatStream';
 import { useChatStore } from '@/store/authStore';
-import { Sparkles, MessageSquare } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { apiService } from '@/services/api';
 
 interface PageProps {
@@ -52,8 +52,8 @@ export default function Home({ refetchThreads }: PageProps) {
         await streamChat(`I've uploaded the file: ${file.name} - please summarize it or answer questions based on it.`, newThreadId);
         if (refetchThreads) refetchThreads();
       }, 100);
-    } catch (err: any) {
-      setError(err.message || 'File upload failed');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'File upload failed');
     } finally {
       setUploading(false);
     }

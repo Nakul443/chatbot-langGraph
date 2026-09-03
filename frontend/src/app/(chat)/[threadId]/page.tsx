@@ -5,21 +5,25 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { useChatStream } from '@/hooks/useChatStream';
 import { useChatStore } from '@/store/authStore';
 import { apiService } from '@/services/api';
-import { Sparkles } from 'lucide-react';
 
 interface PageProps {
   refetchThreads?: () => void;
 }
 
+interface HistoryMessage {
+  id?: string;
+  role?: string;
+  content?: string;
+}
+
 export default function ThreadPage({ refetchThreads }: PageProps) {
   const params = useParams();
-  const router = useRouter();
   const threadId = params.threadId as string;
 
   const { messages, setMessages, activeThreadId, setActiveThreadId, isStreaming } = useChatStore();
@@ -45,9 +49,9 @@ export default function ThreadPage({ refetchThreads }: PageProps) {
       apiService.getHistory(threadId)
         .then((history) => {
           if (Array.isArray(history)) {
-            const mapped = history.map((msg: any) => ({
+            const mapped = (history as HistoryMessage[]).map((msg) => ({
               id: msg.id || Math.random().toString(),
-              role: msg.role === 'user' ? 'user' : 'assistant',
+              role: msg.role === 'user' ? 'user' : 'assistant' as const,
               content: msg.content || '',
             }));
             setMessages(mapped);
@@ -77,8 +81,8 @@ export default function ThreadPage({ refetchThreads }: PageProps) {
       // Automatically prompt graph to index uploaded file
       await streamChat(`I've uploaded the file: ${file.name} - please summarize it or answer questions based on it.`, threadId);
       if (refetchThreads) refetchThreads();
-    } catch (err: any) {
-      setError(err.message || 'File upload failed');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'File upload failed');
     } finally {
       setUploading(false);
     }
