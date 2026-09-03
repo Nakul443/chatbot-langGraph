@@ -119,3 +119,98 @@ async def handle_chat_upload(files: list[UploadFile], thread_id: str, user_id: s
             yield f"data: Error: {e!s}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+async def handle_get_threads(user_id: str) -> list[dict]:
+    """
+    Retrieves all thread IDs for the authenticated user, ordered by most recently updated.
+    Strips the user_id prefix before returning.
+    """
+    from psycopg.rows import dict_row
+
+    from app.persistence.db import connection_pool
+
+    query = """
+        SELECT thread_id, max(checkpoint->>'ts') as last_updated
+        FROM checkpoints
+        WHERE thread_id LIKE %s
+        GROUP BY thread_id
+        ORDER BY last_updated DESC
+    """
+
+    # async with connection pool is responsible for acquiring and releasing a connection from the pool
+    # a single `async with` statement is used with multiple contexts to optimize resource management
+    # the query uses a parameterized LIKE clause to filter threads belonging to the user
+    async with connection_pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(query, (f"{user_id}:%",))
+        rows = await cur.fetchall()
+
+    threads = []
+    for row in rows:
+        full_thread_id = row["thread_id"]
+        last_updated = row["last_updated"]
+        
+        # Strip "{user_id}:" prefix
+        if ":" in full_thread_id:
+            _, actual_thread_id = full_thread_id.split(":", 1)
+        else:
+            actual_thread_id = full_thread_id
+
+        threads.append({
+            "thread_id": actual_thread_id,
+            "updated_at": last_updated,
+            "preview": f"Last updated: {last_updated}"
+        })
+
+    return threads
+
+
+async def handle_get_history(thread_id: str, user_id: str) -> list[dict]:
+    """
+    Loads the full message history for a specific thread, verifies ownership,
+    and returns it as a plain JSON list of {role, content} messages, in order.
+    """
+    if not thread_id:
+        raise HTTPException(status_code=400, detail="thread_id is required.")
+
+    # Scope the thread to the authenticated user so one user can never read/write
+    # another user's conversation just by guessing/reusing a thread_id.
+    scoped_thread_id = f"{user_id}:{thread_id}"
+
+    checkpointer = await get_checkpointer()
+    graph = await build_graph_with_checkpointer(checkpointer)
+
+    config: RunnableConfig = {"configurable": {"thread_id": scoped_thread_id}}
+
+    # Load the state of the graph for this thread
+    state = await graph.aget_state(config)
+
+    # If the thread does not exist (or has no metadata/checkpoints), state.metadata is None.
+    # Return 404 to verify the thread belongs to the requesting user and exists.
+    if state.metadata is None:
+        raise HTTPException(status_code=404, detail="Thread not found.")
+
+    messages = state.values.get("messages", [])
+    
+    # Map messages to plain JSON list of {role, content}
+    history = []
+    for msg in messages:
+        # standard mapping of roles
+        role = "user"
+        if msg.type == "human":
+            role = "user"
+        elif msg.type == "ai":
+            role = "assistant"
+        elif msg.type == "system":
+            role = "system"
+        elif msg.type == "tool":
+            role = "tool"
+        else:
+            role = msg.type  # fallback
+
+        history.append({
+            "role": role,
+            "content": msg.content
+        })
+
+    return history
