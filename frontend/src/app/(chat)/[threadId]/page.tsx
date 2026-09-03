@@ -51,7 +51,7 @@ export default function ThreadPage({ refetchThreads }: PageProps) {
           if (Array.isArray(history)) {
             const mapped = (history as HistoryMessage[]).map((msg) => ({
               id: msg.id || Math.random().toString(),
-              role: msg.role === 'user' ? 'user' : 'assistant' as const,
+              role: (msg.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
               content: msg.content || '',
             }));
             setMessages(mapped);

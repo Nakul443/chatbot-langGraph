@@ -6,6 +6,9 @@
 import os
 import sys
 
+from dotenv import load_dotenv
+load_dotenv()
+
 # Allows running this file directly (`python3 main.py` from inside app/, or
 # `python3 app/main.py` from the project root) by making sure the project
 # root is on sys.path before the `app.*` imports below are resolved.
@@ -53,6 +56,16 @@ app.add_middleware(AuthMiddleware)
 # include routers
 app.include_router(chat_router)
 app.include_router(auth_router)
+
+@app.get("/")
+async def root_redirect():
+    """Returns a friendly pointer to the frontend and API docs."""
+    return {
+        "message": "Welcome to the LangGraph Chatbot API!",
+        "frontend_url": "http://localhost:3000",
+        "documentation_url": "/docs",
+        "health_check": "/health"
+    }
 
 @app.get("/health")
 async def health_check():

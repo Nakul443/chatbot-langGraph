@@ -44,45 +44,46 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
             <span className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce delay-300" />
           </div>
         ) : (
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            className="markdown-content space-y-4 leading-relaxed"
-            components={{
-              pre({ ...props }) {
-                return (
-                  <div className="relative my-4 overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-950 p-4 font-mono text-xs text-zinc-300">
-                    <pre {...props} />
-                  </div>
-                );
-              },
-              code({ className, ...props }) {
-                const isInline = !className;
-                return isInline ? (
-                  <code className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-xs text-blue-300" {...props} />
-                ) : (
-                  <code className={className} {...props} />
-                );
-              },
-              table({ ...props }) {
-                return (
-                  <div className="my-4 overflow-x-auto rounded-xl border border-zinc-800">
-                    <table className="min-w-full divide-y divide-zinc-800 text-left text-sm" {...props} />
-                  </div>
-                );
-              },
-              th({ ...props }) {
-                return <th className="bg-zinc-900 px-4 py-2 font-medium text-zinc-200" {...props} />;
-              },
-              td({ ...props }) {
-                return <td className="border-t border-zinc-800 px-4 py-2 text-zinc-400" {...props} />;
-              },
-              a({ ...props }) {
-                return <a className="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />;
-              }
-            }}
-          >
-            {message.content}
-          </ReactMarkdown>
+          <div className="markdown-content space-y-4 leading-relaxed">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                pre({ ...props }) {
+                  return (
+                    <div className="relative my-4 overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-950 p-4 font-mono text-xs text-zinc-300">
+                      <pre {...props} />
+                    </div>
+                  );
+                },
+                code({ className, ...props }) {
+                  const isInline = !className;
+                  return isInline ? (
+                    <code className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-xs text-blue-300" {...props} />
+                  ) : (
+                    <code className={className} {...props} />
+                  );
+                },
+                table({ ...props }) {
+                  return (
+                    <div className="my-4 overflow-x-auto rounded-xl border border-zinc-800">
+                      <table className="min-w-full divide-y divide-zinc-800 text-left text-sm" {...props} />
+                    </div>
+                  );
+                },
+                th({ ...props }) {
+                  return <th className="bg-zinc-900 px-4 py-2 font-medium text-zinc-200" {...props} />;
+                },
+                td({ ...props }) {
+                  return <td className="border-t border-zinc-800 px-4 py-2 text-zinc-400" {...props} />;
+                },
+                a({ ...props }) {
+                  return <a className="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />;
+                }
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+          </div>
         )}
       </div>
     </div>

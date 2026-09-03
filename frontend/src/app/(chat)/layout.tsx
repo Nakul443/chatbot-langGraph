@@ -40,7 +40,7 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
         if (Array.isArray(history)) {
           const mapped = (history as HistoryMessage[]).map((msg) => ({
             id: msg.id || Math.random().toString(),
-            role: msg.role === 'user' ? 'user' : 'assistant' as const,
+            role: (msg.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
             content: msg.content || '',
           }));
           setMessages(mapped);
@@ -66,7 +66,14 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
         loading={loading}
       />
       <main className="flex-1 flex flex-col min-w-0 h-full relative">
-        {React.cloneElement(children as React.ReactElement, { refetchThreads: refetch })}
+        {React.Children.map(children, (child) => {
+          if (React.isValidElement(child)) {
+            return React.cloneElement(child as React.ReactElement<{ refetchThreads?: () => void }>, {
+              refetchThreads: refetch,
+            });
+          }
+          return child;
+        })}
       </main>
     </div>
   );

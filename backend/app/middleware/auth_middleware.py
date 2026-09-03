@@ -8,16 +8,20 @@
 import os
 
 import jwt
+from dotenv import load_dotenv
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-JWT_SECRET = os.getenv("JWT_SECRET_KEY","")
+load_dotenv()
+
+# Fetching secret dynamically inside dispatch or evaluating on load after load_dotenv
+JWT_SECRET = os.getenv("JWT_SECRET_KEY", "")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 
 
 # jwt will be verified everywhere except these public paths, which are accessible without authentication
-PUBLIC_PATHS = {"/health", "/docs", "/openapi.json", "/redoc", "/auth/signup", "/auth/login"}
+PUBLIC_PATHS = {"/", "/health", "/docs", "/openapi.json", "/redoc", "/auth/signup", "/auth/login", "/favicon.ico"}
 
 
 class AuthMiddleware(BaseHTTPMiddleware):

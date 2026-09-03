@@ -45,7 +45,17 @@ export function useChatStream() {
       });
 
       if (!response.ok) {
-        throw new Error('Streaming failed');
+        let errorMessage = 'Streaming failed';
+        try {
+          const errData = await response.json();
+          errorMessage = errData.error || errData.message || errorMessage;
+        } catch {
+          try {
+            const text = await response.text();
+            errorMessage = text || errorMessage;
+          } catch {}
+        }
+        throw new Error(errorMessage);
       }
 
       const reader = response.body?.getReader();
