@@ -28,11 +28,13 @@ interface ChatStore {
   activeThreadId: string | null;
   messages: Message[];
   isStreaming: boolean;
+  isHistoryLoading: boolean;
   setActiveThreadId: (threadId: string | null) => void;
   setMessages: (messages: Message[] | ((prev: Message[]) => Message[])) => void;
   addMessage: (message: Message) => void;
   updateLastMessage: (content: string) => void;
   setIsStreaming: (isStreaming: boolean) => void;
+  setIsHistoryLoading: (isHistoryLoading: boolean) => void;
 }
 
 // Manages the real-time chat interface, message history, and UI states during conversations
@@ -40,6 +42,7 @@ export const useChatStore = create<ChatStore>((set) => ({
   activeThreadId: null,
   messages: [],
   isStreaming: false,
+  isHistoryLoading: false,
   setActiveThreadId: (threadId) => set({ activeThreadId: threadId }),
   setMessages: (messages) => set((state) => ({
     messages: typeof messages === 'function' ? messages(state.messages) : messages
@@ -55,4 +58,5 @@ export const useChatStore = create<ChatStore>((set) => ({
     return { messages: newMessages };
   }),
   setIsStreaming: (isStreaming) => set({ isStreaming }),
+  setIsHistoryLoading: (isHistoryLoading) => set({ isHistoryLoading }),
 }));

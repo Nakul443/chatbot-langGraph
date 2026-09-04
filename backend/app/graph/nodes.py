@@ -21,7 +21,7 @@ async def _get_model():
         tools = await get_mcp_tools()
         api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         _model_with_tools = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash",
+            model="gemini-2.5-flash",
             temperature=0.7,
             google_api_key=api_key,
         ).bind_tools(tools)

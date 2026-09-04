@@ -57,7 +57,7 @@ class TestChatEndpoints(unittest.TestCase):
         self.assertIn("SELECT thread_id, max(checkpoint->>'ts')", query_arg)
         self.assertEqual(params_arg, ("user-123:%",))
 
-    @patch("app.controllers.chat_controller.build_graph_with_checkpointer")
+    @patch("app.controllers.chat_controller.get_compiled_graph_with_checkpointer")
     @patch("app.controllers.chat_controller.get_checkpointer")
     def test_handle_get_history_success(self, mock_get_checkpointer, mock_build_graph):
         # Setup mocks
@@ -94,7 +94,7 @@ class TestChatEndpoints(unittest.TestCase):
             "configurable": {"thread_id": "user-123:thread-abc"}
         })
 
-    @patch("app.controllers.chat_controller.build_graph_with_checkpointer")
+    @patch("app.controllers.chat_controller.get_compiled_graph_with_checkpointer")
     @patch("app.controllers.chat_controller.get_checkpointer")
     def test_handle_get_history_not_found(self, mock_get_checkpointer, mock_build_graph):
         mock_checkpointer = MagicMock()

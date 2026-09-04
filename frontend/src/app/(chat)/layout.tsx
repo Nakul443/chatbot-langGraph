@@ -20,20 +20,25 @@ interface HistoryMessage {
 
 export default function ChatLayout({ children }: { children: React.ReactNode }) {
   const { threads, loading, refetch } = useThreads();
-  const { activeThreadId, setActiveThreadId, setMessages } = useChatStore();
-  const { setAuth } = useAuthStore();
+  const { activeThreadId, setActiveThreadId, setMessages, setIsHistoryLoading } = useChatStore();
+  const { user, setAuth } = useAuthStore();
   const router = useRouter();
 
   // On initial load, try fetching a temporary user detail if needed (or authStore hydrates if persist)
   useEffect(() => {
     // Populate simple mock/derived user state if empty from cookie context
-    setAuth({ id: 'user', email: 'user@example.com' }, 'auth_token');
-  }, [setAuth]);
+    if (!user) {
+      setAuth({ id: 'user', email: 'user@example.com' }, 'auth_token');
+    }
+  }, [user, setAuth]);
 
   const handleThreadSelect = async (threadId: string | null) => {
     setActiveThreadId(threadId);
+    setMessages([]); // Clear stale messages instantly for immediate feedback
+    
     if (threadId) {
       router.push(`/${threadId}`);
+      setIsHistoryLoading(true);
       try {
         const history = await apiService.getHistory(threadId);
         // Map backend history nodes into state Messages
@@ -50,9 +55,10 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
       } catch (err) {
         console.error('Failed to load thread history', err);
         setMessages([]);
+      } finally {
+        setIsHistoryLoading(false);
       }
     } else {
-      setMessages([]);
       router.push('/');
     }
   };

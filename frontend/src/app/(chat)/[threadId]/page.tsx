@@ -26,7 +26,15 @@ export default function ThreadPage({ refetchThreads }: PageProps) {
   const params = useParams();
   const threadId = params.threadId as string;
 
-  const { messages, setMessages, activeThreadId, setActiveThreadId, isStreaming } = useChatStore();
+  const {
+    messages,
+    setMessages,
+    activeThreadId,
+    setActiveThreadId,
+    isStreaming,
+    isHistoryLoading,
+    setIsHistoryLoading
+  } = useChatStore();
   const { streamChat } = useChatStream();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +54,8 @@ export default function ThreadPage({ refetchThreads }: PageProps) {
   useEffect(() => {
     if (threadId && activeThreadId !== threadId) {
       setActiveThreadId(threadId);
+      setMessages([]); // Clear stale messages instantly for direct/deep link loads
+      setIsHistoryLoading(true);
       apiService.getHistory(threadId)
         .then((history) => {
           if (Array.isArray(history)) {
@@ -62,9 +72,12 @@ export default function ThreadPage({ refetchThreads }: PageProps) {
         .catch((err) => {
           console.error('Failed to restore history', err);
           setMessages([]);
+        })
+        .finally(() => {
+          setIsHistoryLoading(false);
         });
     }
-  }, [threadId, activeThreadId, setActiveThreadId, setMessages]);
+  }, [threadId, activeThreadId, setActiveThreadId, setMessages, setIsHistoryLoading]);
 
   const handleSend = async (message: string) => {
     if (!threadId) return;
@@ -103,9 +116,16 @@ export default function ThreadPage({ refetchThreads }: PageProps) {
       {/* Messages body */}
       <div className="flex-1 overflow-y-auto px-4 py-6 md:px-0">
         <div className="max-w-3xl mx-auto space-y-2">
-          {messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
-          ))}
+          {isHistoryLoading ? (
+            <div className="flex flex-col items-center justify-center h-64 space-y-4">
+              <span className="w-8 h-8 border-4 border-zinc-900 border-t-blue-500 rounded-full animate-spin" />
+              <p className="text-zinc-500 text-xs animate-pulse font-medium">Retrieving chat memory...</p>
+            </div>
+          ) : (
+            messages.map((message) => (
+              <MessageBubble key={message.id} message={message} />
+            ))
+          )}
           <div ref={messagesEndRef} />
         </div>
       </div>

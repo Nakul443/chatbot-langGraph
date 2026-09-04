@@ -6,7 +6,7 @@ from fastapi import HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from langchain_core.runnables import RunnableConfig
 
-from app.graph.builder import build_graph_with_checkpointer
+from app.graph.builder import get_compiled_graph_with_checkpointer
 from app.persistence.db import get_checkpointer
 
 
@@ -29,9 +29,9 @@ async def handle_chat_stream(message: str, thread_id: str, user_id: str) -> Stre
     async def event_generator():
         try:
             # 1. Instantiate the checkpointer (shares the app-wide connection pool)
-            #    and compile the graph for this request.
+            #    and get the cached compiled graph.
             checkpointer = await get_checkpointer()
-            graph = await build_graph_with_checkpointer(checkpointer)
+            graph = await get_compiled_graph_with_checkpointer(checkpointer)
 
             # 2. Configure thread isolation (scoped to the authenticated user)
             config: RunnableConfig = {"configurable": {"thread_id": scoped_thread_id}}
@@ -92,7 +92,7 @@ async def handle_chat_upload(files: list[UploadFile], thread_id: str, user_id: s
     async def event_generator():
         try:
             checkpointer = await get_checkpointer()
-            graph = await build_graph_with_checkpointer(checkpointer)
+            graph = await get_compiled_graph_with_checkpointer(checkpointer)
 
             config: RunnableConfig = {"configurable": {"thread_id": scoped_thread_id}}
 
@@ -183,7 +183,7 @@ async def handle_get_history(thread_id: str, user_id: str) -> list[dict]:
     scoped_thread_id = f"{user_id}:{thread_id}"
 
     checkpointer = await get_checkpointer()
-    graph = await build_graph_with_checkpointer(checkpointer)
+    graph = await get_compiled_graph_with_checkpointer(checkpointer)
 
     config: RunnableConfig = {"configurable": {"thread_id": scoped_thread_id}}
 

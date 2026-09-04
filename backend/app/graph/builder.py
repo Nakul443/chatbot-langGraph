@@ -1,5 +1,7 @@
 # file to build and compile the entire graph
 
+import asyncio
+
 from app.graph.nodes import chatbot_node
 from app.graph.state import State
 from app.graph.tool_executor import custom_tool_executor
@@ -32,8 +34,24 @@ async def _add_nodes_and_edges(workflow: StateGraph) -> StateGraph:
     # After running a tool, loop back to the chatbot so it can use the result
     # to produce the final answer (or call another tool)
     workflow.add_edge("tools", "chatbot")
-
     return workflow
+
+
+_compiled_graph_with_checkpointer = None
+_graph_lock = asyncio.Lock()
+
+
+async def get_compiled_graph_with_checkpointer(checkpointer):
+    """
+    Returns a cached compiled graph bound to the checkpointer instance.
+    This avoids reconstructing and compiling the graph on every single request.
+    """
+    global _compiled_graph_with_checkpointer
+    if _compiled_graph_with_checkpointer is None:
+        async with _graph_lock:
+            if _compiled_graph_with_checkpointer is None:
+                _compiled_graph_with_checkpointer = await build_graph_with_checkpointer(checkpointer)
+    return _compiled_graph_with_checkpointer
 
 
 async def build_graph():

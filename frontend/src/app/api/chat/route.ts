@@ -4,16 +4,13 @@
 // The GET method fetches chat threads or message history,
 // while the POST method handles streaming messages or file uploads based on the request content type
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const token = request.headers.get('cookie')
-      ?.split('; ')
-      .find(row => row.startsWith('auth_token='))
-      ?.split('=')[1];
+    const token = request.cookies.get('auth_token')?.value;
 
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -45,12 +42,9 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const token = request.headers.get('cookie')
-      ?.split('; ')
-      .find(row => row.startsWith('auth_token='))
-      ?.split('=')[1];
+    const token = request.cookies.get('auth_token')?.value;
 
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
