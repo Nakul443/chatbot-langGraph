@@ -114,7 +114,7 @@ Tools are auto-discovered from both on startup and cached for the process lifeti
 | `app/routes/chat_routes.py` | `POST /chat/stream` and `POST /chat/upload`; pulls `user_id` from `request.state` (set by auth middleware). |
 | `app/controllers/chat_controller.py` | Builds the graph per-request, scopes `thread_id` to `user_id`, streams SSE tokens; `handle_chat_upload` additionally base64-encodes the file and seeds `pending_upload`. |
 | `app/graph/state.py` | `State` TypedDict: `messages` (with `add_messages` reducer), `user_id`, `pending_upload`. |
-| `app/graph/nodes.py` | `chatbot_node` — invokes `ChatOpenAI` with all MCP tools bound via `.bind_tools`. |
+| `app/graph/nodes.py` | `chatbot_node` — invokes `ChatGoogleGenerativeAI` with all MCP tools bound via `.bind_tools`. |
 | `app/graph/tool_executor.py` | Custom node replacing the prebuilt `ToolNode`; injects `user_id`/file content into user-scoped tool calls before dispatch, clears `pending_upload` after `ingest_pdf` runs. |
 | `app/graph/builder.py` | `START → chatbot`, conditional edge to `tools`/`END`, `tools → chatbot` loop. |
 | `app/tools/mcp_tools.py` | Connects to both `project_server` and `legal_rag_server` via `MultiServerMCPClient`; caches discovered tools. |
@@ -127,7 +127,7 @@ Tools are auto-discovered from both on startup and cached for the process lifeti
 ### Docker (recommended)
 ```bash
 cp .env.example .env
-# fill in OPENAI_API_KEY, JWT_SECRET_KEY, WEB_SEARCH_API_KEY,
+# fill in GEMINI_API_KEY, JWT_SECRET_KEY, WEB_SEARCH_API_KEY,
 # MCP_AUTH_TOKEN, LEGAL_RAG_MCP_URL, LEGAL_RAG_AUTH_TOKEN
 docker compose up --build
 ```
@@ -162,7 +162,7 @@ curl -N -X POST http://localhost:8000/chat/upload \
 
 ```env
 DATABASE_URL="postgresql://postgres:newpassword123@localhost:5432/chatdb"
-OPENAI_API_KEY="sk-..."
+GEMINI_API_KEY="your-gemini-api-key"
 JWT_SECRET_KEY="something-long-and-random"
 JWT_ALGORITHM="HS256"
 JWT_EXPIRE_MINUTES=30

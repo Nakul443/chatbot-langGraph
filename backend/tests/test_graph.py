@@ -7,7 +7,8 @@ from unittest.mock import MagicMock, patch
 os.environ["LEGAL_RAG_MCP_URL"] = "http://mock-rag/mcp"
 os.environ["WEB_SEARCH_API_KEY"] = "mock-tavily-key"
 os.environ["MCP_SERVER_URL"] = "http://mock-mcp/mcp"
-os.environ["OPENAI_API_KEY"] = "mock-openai-key"
+os.environ["GEMINI_API_KEY"] = "mock-gemini-key"
+os.environ["GOOGLE_API_KEY"] = "mock-google-key"
 
 from langchain_core.messages import AIMessage, ToolMessage
 

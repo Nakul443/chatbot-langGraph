@@ -1,8 +1,10 @@
 # LLM processing logic
 
+import os
+
 from app.graph.state import State
 from app.tools.mcp_tools import get_mcp_tools
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 _model_with_tools = None
 # this global variable will hold the tool-bound model instance, which is built once and reused across invocations.
@@ -17,7 +19,12 @@ async def _get_model():
     global _model_with_tools
     if _model_with_tools is None:
         tools = await get_mcp_tools()
-        _model_with_tools = ChatOpenAI(model="gpt-4o", temperature=0.7).bind_tools(tools)
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        _model_with_tools = ChatGoogleGenerativeAI(
+            model="gemini-1.5-flash",
+            temperature=0.7,
+            google_api_key=api_key,
+        ).bind_tools(tools)
     return _model_with_tools
 
 

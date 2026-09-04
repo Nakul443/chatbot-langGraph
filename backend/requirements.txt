@@ -5,7 +5,7 @@ uvicorn[standard]
 # Core Orchestration
 langchain
 langgraph
-langchain-openai
+langchain-google-genai
 langchain-core
 
 # State Persistence (Postgres)
