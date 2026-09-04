@@ -56,7 +56,18 @@ export async function POST(request: NextRequest) {
     
     if (contentType.includes('multipart/form-data')) {
       // File upload proxy
-      const formData = await request.formData();
+      const incomingFormData = await request.formData();
+      const formData = new FormData();
+      
+      for (const [key, value] of incomingFormData.entries()) {
+        if (value instanceof Blob) {
+          const filename = (value as File).name || 'file.pdf';
+          formData.append(key, value, filename);
+        } else {
+          formData.append(key, value);
+        }
+      }
+
       const res = await fetch(`${BACKEND_URL}/chat/upload`, {
         method: 'POST',
         headers: {

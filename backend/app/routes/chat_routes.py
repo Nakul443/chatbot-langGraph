@@ -35,7 +35,8 @@ async def chat_stream(request: ChatRequest, http_request: Request) -> StreamingR
 async def chat_upload(
     http_request: Request,
     files: list[UploadFile] = File(...),
-    thread_id: str = Form(...)
+    thread_id: str = Form(...),
+    message: str = Form(None)
 ) -> StreamingResponse:
     """
     HTTP route endpoint for uploading PDF files.
@@ -44,7 +45,7 @@ async def chat_upload(
     `user_id` is set by AuthMiddleware after verifying the JWT.
     """
     user_id = http_request.state.user_id # set by authMiddleware after JWT verification
-    return await handle_chat_upload(files, thread_id, user_id)
+    return await handle_chat_upload(files, thread_id, user_id, message)
 
 
 # GET: /chat/threads

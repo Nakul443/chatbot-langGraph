@@ -12,14 +12,23 @@ import { Message } from '@/types/chat';
 export function useChatStream() {
   const { addMessage, updateLastMessage, setIsStreaming } = useChatStore();
 
-  const streamChat = async (message: string, threadId: string) => {
+  const streamChat = async (message: string, threadId: string, file?: File | null) => {
     setIsStreaming(true);
 
     // 1. Add user message to UI
+    let displayMessage = message;
+    if (file) {
+      if (message.trim()) {
+        displayMessage = `Uploaded \`${file.name}\` — ${message}`;
+      } else {
+        displayMessage = `Uploaded \`${file.name}\``;
+      }
+    }
+
     const userMsg: Message = {
       id: Math.random().toString(),
       role: 'user',
-      content: message,
+      content: displayMessage,
     };
     addMessage(userMsg);
 
@@ -33,16 +42,32 @@ export function useChatStream() {
     addMessage(assistantMsg);
 
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message,
-          thread_id: threadId,
-        }),
-      });
+      let response: Response;
+
+      if (file) {
+        const formData = new FormData();
+        formData.append('files', file);
+        formData.append('thread_id', threadId);
+        if (message.trim()) {
+          formData.append('message', message);
+        }
+
+        response = await fetch('/api/chat', {
+          method: 'POST',
+          body: formData,
+        });
+      } else {
+        response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message,
+            thread_id: threadId,
+          }),
+        });
+      }
 
       if (!response.ok) {
         let errorMessage = 'Streaming failed';

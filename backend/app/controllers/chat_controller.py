@@ -61,7 +61,7 @@ async def handle_chat_stream(message: str, thread_id: str, user_id: str) -> Stre
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
-async def handle_chat_upload(files: list[UploadFile], thread_id: str, user_id: str) -> StreamingResponse:
+async def handle_chat_upload(files: list[UploadFile], thread_id: str, user_id: str, message: str = None) -> StreamingResponse:
     """
     Handles file upload, converts them to base64, updates the graph state with
     the files and triggers an ingestion instruction message in the stream.
@@ -98,7 +98,10 @@ async def handle_chat_upload(files: list[UploadFile], thread_id: str, user_id: s
 
             # Format the trigger message so LLM knows files have been uploaded and can decide to call ingest_pdf
             filenames_str = ", ".join(f"`{name}`" for name in filenames)
-            trigger_message = f"I've uploaded the following file(s): {filenames_str} — please index them."
+            if message and message.strip():
+                trigger_message = f"I've uploaded the following file(s): {filenames_str}.\n\nMy request: {message}"
+            else:
+                trigger_message = f"I've uploaded the following file(s): {filenames_str} — please index them."
 
             input_data = {
                 "messages": [("user", trigger_message)],

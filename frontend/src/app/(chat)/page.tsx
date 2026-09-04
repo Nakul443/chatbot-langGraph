@@ -23,7 +23,7 @@ export default function Home({ refetchThreads }: PageProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleNewChat = async (message: string) => {
+  const handleNewChat = async (message: string, file?: File | null) => {
     // Generate unique random thread ID for new conversation
     const newThreadId = `thread_${Math.random().toString(36).substring(2, 15)}`;
     setActiveThreadId(newThreadId);
@@ -31,32 +31,22 @@ export default function Home({ refetchThreads }: PageProps) {
     // Redirect to active thread immediately
     router.push(`/${newThreadId}`);
 
+    if (file) {
+      setUploading(true);
+    }
+    setError(null);
+
     // Wait short period for path update before streaming
     setTimeout(async () => {
-      await streamChat(message, newThreadId);
-      if (refetchThreads) refetchThreads();
-    }, 100);
-  };
-
-  const handleFileUpload = async (file: File) => {
-    setUploading(true);
-    setError(null);
-    try {
-      const newThreadId = `thread_${Math.random().toString(36).substring(2, 15)}`;
-      setActiveThreadId(newThreadId);
-      router.push(`/${newThreadId}`);
-
-      // Wait short period for path update before upload & initial stream
-      setTimeout(async () => {
-        await apiService.uploadFile(file, newThreadId);
-        await streamChat(`I've uploaded the file: ${file.name} - please summarize it or answer questions based on it.`, newThreadId);
+      try {
+        await streamChat(message, newThreadId, file);
         if (refetchThreads) refetchThreads();
-      }, 100);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'File upload failed');
-    } finally {
-      setUploading(false);
-    }
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Failed to start conversation');
+      } finally {
+        setUploading(false);
+      }
+    }, 100);
   };
 
   return (
@@ -86,7 +76,6 @@ export default function Home({ refetchThreads }: PageProps) {
       <div className="w-full max-w-3xl mx-auto px-4 md:px-6 pb-8">
         <ChatInput
           onSend={handleNewChat}
-          onFileUpload={handleFileUpload}
           disabled={isStreaming}
           uploading={uploading}
         />

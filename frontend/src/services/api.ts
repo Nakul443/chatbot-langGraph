@@ -43,7 +43,7 @@ export const apiService = {
 
   async uploadFile(file: File, threadId: string) {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('files', file);
     formData.append('thread_id', threadId);
 
     const res = await fetch('/api/chat', {

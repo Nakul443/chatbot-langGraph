@@ -79,23 +79,17 @@ export default function ThreadPage({ refetchThreads }: PageProps) {
     }
   }, [threadId, activeThreadId, setActiveThreadId, setMessages, setIsHistoryLoading]);
 
-  const handleSend = async (message: string) => {
+  const handleSend = async (message: string, file?: File | null) => {
     if (!threadId) return;
-    await streamChat(message, threadId);
-    if (refetchThreads) refetchThreads();
-  };
-
-  const handleFileUpload = async (file: File) => {
-    if (!threadId) return;
-    setUploading(true);
     setError(null);
+    if (file) {
+      setUploading(true);
+    }
     try {
-      await apiService.uploadFile(file, threadId);
-      // Automatically prompt graph to index uploaded file
-      await streamChat(`I've uploaded the file: ${file.name} - please summarize it or answer questions based on it.`, threadId);
+      await streamChat(message, threadId, file);
       if (refetchThreads) refetchThreads();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'File upload failed');
+      setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setUploading(false);
     }
@@ -139,7 +133,6 @@ export default function ThreadPage({ refetchThreads }: PageProps) {
         )}
         <ChatInput
           onSend={handleSend}
-          onFileUpload={handleFileUpload}
           disabled={isStreaming}
           uploading={uploading}
         />
