@@ -2,12 +2,11 @@
 
 import base64
 
+from app.graph.builder import get_compiled_graph_with_checkpointer
+from app.persistence.db import get_checkpointer
 from fastapi import HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from langchain_core.runnables import RunnableConfig
-
-from app.graph.builder import get_compiled_graph_with_checkpointer
-from app.persistence.db import get_checkpointer
 
 
 # when user sends a message
@@ -61,7 +60,7 @@ async def handle_chat_stream(message: str, thread_id: str, user_id: str) -> Stre
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
-async def handle_chat_upload(files: list[UploadFile], thread_id: str, user_id: str, message: str = None) -> StreamingResponse:
+async def handle_chat_upload(files: list[UploadFile], thread_id: str, user_id: str, message: str | None = None) -> StreamingResponse:
     """
     Handles file upload, converts them to base64, updates the graph state with
     the files and triggers an ingestion instruction message in the stream.
@@ -129,9 +128,8 @@ async def handle_get_threads(user_id: str) -> list[dict]:
     Retrieves all thread IDs for the authenticated user, ordered by most recently updated.
     Strips the user_id prefix before returning.
     """
-    from psycopg.rows import dict_row
-
     from app.persistence.db import connection_pool
+    from psycopg.rows import dict_row
 
     query = """
         SELECT thread_id, max(checkpoint->>'ts') as last_updated

@@ -36,7 +36,7 @@ async def chat_upload(
     http_request: Request,
     files: list[UploadFile] = File(...),
     thread_id: str = Form(...),
-    message: str = Form(None)
+    message: str | None = Form(None)
 ) -> StreamingResponse:
     """
     HTTP route endpoint for uploading PDF files.
